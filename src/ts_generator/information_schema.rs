@@ -193,6 +193,7 @@ impl DBSchema {
         } else {
           None
         };
+
         let field = Field {
           field_type: TsFieldType::get_ts_field_type_from_mysql_field_type(
             field_type.to_owned(),
