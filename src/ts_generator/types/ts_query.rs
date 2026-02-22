@@ -109,6 +109,7 @@ impl TsFieldType {
     table_name: String,
     field_name: String,
     enum_values: Option<Vec<String>>,
+    set_values: Option<Vec<String>>,
   ) -> Self {
     match mysql_field_type.as_str() {
       "bigint" | "decimal" | "double" | "float" | "int" | "mediumint" | "smallint" | "year" => Self::Number,
@@ -121,6 +122,15 @@ impl TsFieldType {
         }
 
         let warning_message = format!("Failed to find enum values for field {field_name} of table {table_name}");
+        warning!(warning_message);
+        Self::Any
+      }
+      "set" => {
+        if let Some(set_values) = set_values {
+          return Self::Array(Box::new(Self::Enum(set_values)));
+        }
+
+        let warning_message = format!("Failed to find set values for field {field_name} of table {table_name}");
         warning!(warning_message);
         Self::Any
       }

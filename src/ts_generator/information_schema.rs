@@ -167,7 +167,20 @@ impl DBSchema {
               WHERE subcols.TABLE_SCHEMA = (SELECT DATABASE())
                 AND subcols.TABLE_NAME = C.TABLE_NAME
                 AND subcols.COLUMN_NAME = C.COLUMN_NAME
-            ) AS enums
+            ) AS enums,
+            (
+              SELECT REPLACE(
+                  TRIM(TRAILING ')' FROM
+                  TRIM(LEADING '(' from
+                  TRIM(LEADING 'set' FROM COLUMN_TYPE)))
+                , '\''
+                , ''
+              )
+              FROM information_schema.COLUMNS subcols
+              WHERE subcols.TABLE_SCHEMA = (SELECT DATABASE())
+                AND subcols.TABLE_NAME = C.TABLE_NAME
+                AND subcols.COLUMN_NAME = C.COLUMN_NAME
+            ) AS set_values
         FROM information_schema.COLUMNS C
         WHERE TABLE_SCHEMA = (SELECT DATABASE())
         AND TABLE_NAME IN ({table_names})
@@ -193,12 +206,19 @@ impl DBSchema {
         } else {
           None
         };
+        let set_values = (field_type == "set").then(|| {
+          let set_values_joined: String = row.clone().take(5).expect(DB_SCHEME_READ_ERROR);
+          let set_values: Vec<_> = set_values_joined.split(",").map(|x| x.to_string()).collect();
+          set_values
+        });
+
         let field = Field {
           field_type: TsFieldType::get_ts_field_type_from_mysql_field_type(
             field_type.to_owned(),
             table_name.to_owned(),
             field_name.to_owned(),
             enum_values.to_owned(),
+            set_values.to_owned(),
           ),
           is_nullable: is_nullable == "YES",
         };
